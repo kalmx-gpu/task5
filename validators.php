@@ -6,7 +6,6 @@ function utf8_strlen($string) {
     if (function_exists('iconv_strlen')) {
         return iconv_strlen($string, 'UTF-8');
     }
-    // Запасной вариант через регулярное выражение
     return preg_match_all('/./u', $string, $matches);
 }
 

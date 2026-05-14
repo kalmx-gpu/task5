@@ -10,7 +10,7 @@
 <div class="glass-container">
     <div class="form-card">
         <h1>Анкета пользователя</h1>
-        <p class="subtitle">Первая отправка создаст логин и пароль. Войдите, чтобы редактировать данные.</p>
+        <p class="subtitle">Первая отправка создаст логин и пароль</p>
 
         <?php if (!empty($messages)): ?>
             <div class="messages">
@@ -20,7 +20,7 @@
 
         <?php if (!$isAuthenticated): ?>
             <div class="auth-panel">
-                <h3>Вход для редактирования</h3>
+                <h3>Вход</h3>
                 <form action="" method="post">
                     <input type="hidden" name="action" value="login">
                     <div class="form-group">

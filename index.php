@@ -11,7 +11,6 @@ require_once 'save.php';
 $fields = ['full_name', 'phone', 'email', 'birth_date', 'gender', 'languages', 'bio', 'contract_agreed'];
 $pdo = getDBConnection();
 
-// ----- Обработка POST -----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -102,31 +101,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ----- GET: подготовка данных -----
 $messages = [];
 $errors = [];
 $values = [];
 
-// Инициализация значений по умолчанию (ВАЖНО: languages = [])
 foreach ($fields as $f) {
     $values[$f] = ($f === 'languages') ? [] : '';
 }
 
-// Успешное сохранение
 if (!empty($_COOKIE['save'])) {
     setcookie('save', '', 100000);
     $messages[] = '<div class="success-message">' . ($_SESSION['success'] ?? 'Спасибо, результаты сохранены.') . '</div>';
     unset($_SESSION['success']);
 }
 
-// Показать сгенерированные логин/пароль
 if (!empty($_SESSION['generated_creds'])) {
     $creds = $_SESSION['generated_creds'];
     $messages[] = '<div class="success-message">Сохраните данные для входа:<br>Логин: <strong>' . htmlspecialchars($creds['login']) . '</strong><br>Пароль: <strong>' . htmlspecialchars($creds['password']) . '</strong></div>';
     unset($_SESSION['generated_creds']);
 }
 
-// Ошибки БД или авторизации
 if (!empty($_SESSION['db_error'])) {
     $messages[] = '<div class="error-message">' . htmlspecialchars($_SESSION['db_error']) . '</div>';
     unset($_SESSION['db_error']);
@@ -157,7 +151,6 @@ if ($isAuthenticated) {
     }
 }
 
-// Гость: загружаем из кук
 if (!$isAuthenticated) {
     $flashValues = [];
     foreach ($fields as $field) {
@@ -181,10 +174,11 @@ if (!$isAuthenticated) {
             }
         }
     }
-    if (!is_array($values['languages'])) $values['languages'] = [];
+    if (!isset($values['languages']) || !is_array($values['languages'])) {
+        $values['languages'] = [];
+    }
     $values['contract_agreed'] = !empty($values['contract_agreed']);
 
-    // Ошибки из кук
     foreach ($fields as $field) {
         if (!empty($_COOKIE[$field . '_error'])) {
             $errors[$field] = true;
@@ -192,7 +186,6 @@ if (!$isAuthenticated) {
     }
 }
 
-// Тексты ошибок для отображения под полями
 $errorMessages = [];
 foreach ($fields as $field) {
     if (isset($errors[$field])) {
