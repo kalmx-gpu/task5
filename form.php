@@ -14,9 +14,12 @@
 <body>
 
     <?php if (!empty($_SESSION['login'])): ?>
-        <div style="background: #e8f4fd; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: right;">
-            Вы вошли как <strong><?= htmlspecialchars($_SESSION['login']) ?></strong>
-            <a href="logout.php" style="margin-left: 15px; color: red;">Выйти</a>
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div><strong>Вы авторизованы как:</strong> <?= htmlspecialchars($_SESSION['login']) ?></div>
+            <div><strong>Ваш пароль:</strong> <?= htmlspecialchars($_SESSION['pass'] ?? '') ?></div>
+            <div style="margin-top: 10px; text-align: right;">
+                <a href="logout.php" style="color: red;">Выйти</a>
+            </div>
         </div>
     <?php endif; ?>
 
