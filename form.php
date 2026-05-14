@@ -9,7 +9,7 @@
 <body>
 <div class="glass-container">
     <div class="form-card">
-        <h1>📝 Анкета пользователя</h1>
+        <h1>Анкета пользователя</h1>
         <p class="subtitle">Первая отправка создаст логин и пароль. Войдите, чтобы редактировать данные.</p>
 
         <?php if (!empty($messages)): ?>
@@ -20,7 +20,7 @@
 
         <?php if (!$isAuthenticated): ?>
             <div class="auth-panel">
-                <h3>🔐 Вход для редактирования</h3>
+                <h3>Вход для редактирования</h3>
                 <form action="" method="post">
                     <input type="hidden" name="action" value="login">
                     <div class="form-group">
@@ -37,7 +37,7 @@
             <div class="divider"></div>
         <?php else: ?>
             <div class="auth-panel success">
-                <p>✅ Вы авторизованы как <strong><?= htmlspecialchars($authLogin) ?></strong> 
+                <p>Вы авторизованы как <strong><?= htmlspecialchars($authLogin) ?></strong>
                 <a href="#" onclick="document.getElementById('logout-form').submit(); return false;">(Выйти)</a></p>
                 <form id="logout-form" action="" method="post" style="display:none;">
                     <input type="hidden" name="action" value="logout">

@@ -11,18 +11,16 @@ require_once 'save.php';
 $fields = ['full_name', 'phone', 'email', 'birth_date', 'gender', 'languages', 'bio', 'contract_agreed'];
 $pdo = getDBConnection();
 
-// ----- Обработка действий POST -----
+// ----- Обработка POST -----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // Выход
     if ($action === 'logout') {
         session_destroy();
         header('Location: index.php');
         exit();
     }
 
-    // Логин
     if ($action === 'login') {
         $login = trim($_POST['auth_login'] ?? '');
         $password = $_POST['auth_password'] ?? '';
@@ -32,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $appId = authenticate($login, $password, $pdo);
             if ($appId) {
                 $_SESSION['application_id'] = $appId;
-                $_SESSION['login'] = $login;   // сохраняем логин в сессию
+                $_SESSION['login'] = $login;
                 unset($_SESSION['auth_error']);
             } else {
                 $_SESSION['auth_error'] = 'Неверный логин или пароль.';
@@ -42,9 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Сохранение (новая заявка или обновление)
     if ($action === 'save') {
-        // Собираем и нормализуем данные
         $data = [
             'full_name' => trim($_POST['full_name'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
@@ -56,21 +52,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'contract_agreed' => isset($_POST['contract_agreed']) ? 1 : 0
         ];
 
-        // Валидация
         $errors = validateAllFields($data);
         $hasErrors = !empty($errors);
 
-        // Устанавливаем временные куки для ошибок и значений (как в задании 4)
         foreach ($fields as $field) {
-            $errorKey = $field . '_error';
-            $valueKey = $field . '_value';
-            setcookie($errorKey, '', 100000);
-            setcookie($valueKey, '', 100000);
+            setcookie($field . '_error', '', 100000);
+            setcookie($field . '_value', '', 100000);
             if (isset($errors[$field])) {
-                setcookie($errorKey, '1', time() + 86400);
+                setcookie($field . '_error', '1', time() + 86400);
                 $val = $data[$field] ?? '';
                 if (is_array($val)) $val = serialize($val);
-                setcookie($valueKey, $val, time() + 86400);
+                setcookie($field . '_value', $val, time() + 86400);
             }
         }
 
@@ -79,31 +71,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
 
-        // Ошибок нет
         try {
             $isAuth = isset($_SESSION['application_id']);
             if ($isAuth) {
-                // Обновление существующей заявки
-                $appId = (int)$_SESSION['application_id'];
-                updateApplication($appId, $data, $pdo);
+                updateApplication((int)$_SESSION['application_id'], $data, $pdo);
                 $_SESSION['success'] = 'Данные успешно обновлены.';
             } else {
-                // Новая заявка (гость)
                 $appId = saveNewApplication($data, $pdo);
                 $login = generateUniqueLogin($pdo);
                 $password = generatePassword();
                 createAccount($appId, $login, $password, $pdo);
-                // Сохраняем учётные данные для показа один раз
                 $_SESSION['generated_creds'] = ['login' => $login, 'password' => $password];
                 $_SESSION['success'] = 'Анкета сохранена.';
-                // Сохраняем успешные значения в долговременные куки (для гостя)
                 foreach ($fields as $field) {
                     $val = $data[$field] ?? '';
                     if (is_array($val)) $val = serialize($val);
                     setcookie($field, $val, time() + 365 * 86400);
                 }
             }
-            // Удаляем временные куки ошибок
             foreach ($fields as $field) {
                 setcookie($field . '_error', '', 100000);
                 setcookie($field . '_value', '', 100000);
@@ -117,28 +102,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ----- GET: подготовка данных для формы -----
+// ----- GET: подготовка данных -----
 $messages = [];
 $errors = [];
 $values = [];
 
-// Инициализация languages как массива для всех случаев
+// Инициализация значений по умолчанию (ВАЖНО: languages = [])
 foreach ($fields as $f) {
-    if ($f === 'languages') {
-        $values[$f] = [];
-    } else {
-        $values[$f] = '';
-    }
+    $values[$f] = ($f === 'languages') ? [] : '';
 }
 
-// Сообщение об успешном сохранении
+// Успешное сохранение
 if (!empty($_COOKIE['save'])) {
     setcookie('save', '', 100000);
     $messages[] = '<div class="success-message">' . ($_SESSION['success'] ?? 'Спасибо, результаты сохранены.') . '</div>';
     unset($_SESSION['success']);
 }
 
-// Сообщение о сгенерированных учётных данных
+// Показать сгенерированные логин/пароль
 if (!empty($_SESSION['generated_creds'])) {
     $creds = $_SESSION['generated_creds'];
     $messages[] = '<div class="success-message">Сохраните данные для входа:<br>Логин: <strong>' . htmlspecialchars($creds['login']) . '</strong><br>Пароль: <strong>' . htmlspecialchars($creds['password']) . '</strong></div>';
@@ -155,35 +136,29 @@ if (!empty($_SESSION['auth_error'])) {
     unset($_SESSION['auth_error']);
 }
 
-// Загружаем данные: если авторизован — из БД, иначе — из кук
 $isAuthenticated = isset($_SESSION['application_id']);
 $authLogin = $_SESSION['login'] ?? '';
 
 if ($isAuthenticated) {
-    $appId = (int)$_SESSION['application_id'];
-    $appData = getApplicationById($appId, $pdo);
+    $appData = getApplicationById((int)$_SESSION['application_id'], $pdo);
     if ($appData) {
-        $values = [
-            'full_name' => $appData['full_name'],
-            'phone' => $appData['phone'],
-            'email' => $appData['email'],
-            'birth_date' => $appData['birth_date'],
-            'gender' => $appData['gender'],
-            'languages' => $appData['languages'] ?? [],
-            'bio' => $appData['bio'],
-            'contract_agreed' => $appData['contract_agreed']
-        ];
+        foreach ($fields as $f) {
+            if ($f === 'languages') {
+                $values[$f] = $appData[$f] ?? [];
+            } else {
+                $values[$f] = $appData[$f] ?? '';
+            }
+        }
+        $values['contract_agreed'] = !empty($appData['contract_agreed']);
     } else {
-        // если заявка удалена — выходим
         session_destroy();
         $isAuthenticated = false;
-        $messages[] = '<div class="error-message">Ваша анкета не найдена. Войдите заново.</div>';
+        $messages[] = '<div class="error-message">Анкета не найдена. Войдите заново.</div>';
     }
 }
 
-// Для гостя — берём значения из долговременных кук (если нет flash-ошибок)
+// Гость: загружаем из кук
 if (!$isAuthenticated) {
-    // Сначала пытаемся взять из flash-кук (последняя неудачная попытка)
     $flashValues = [];
     foreach ($fields as $field) {
         $valueKey = $field . '_value';
@@ -192,31 +167,24 @@ if (!$isAuthenticated) {
             if ($field === 'languages') $val = unserialize($val);
             $flashValues[$field] = $val;
         }
-        // Удаляем временные куки, чтобы они не висели
         setcookie($valueKey, '', 100000);
         setcookie($field . '_error', '', 100000);
     }
     if (!empty($flashValues)) {
         $values = $flashValues;
     } else {
-        // Иначе из постоянных кук
         foreach ($fields as $field) {
             if (!empty($_COOKIE[$field])) {
                 $val = $_COOKIE[$field];
                 if ($field === 'languages') $val = unserialize($val);
                 $values[$field] = $val;
-            } else {
-                $values[$field] = ($field === 'languages') ? [] : '';
             }
         }
     }
-    // Убедимся, что languages — массив
     if (!is_array($values['languages'])) $values['languages'] = [];
     $values['contract_agreed'] = !empty($values['contract_agreed']);
-}
 
-// Собираем ошибки из кук ошибок (для гостя)
-if (!$isAuthenticated) {
+    // Ошибки из кук
     foreach ($fields as $field) {
         if (!empty($_COOKIE[$field . '_error'])) {
             $errors[$field] = true;
@@ -224,7 +192,7 @@ if (!$isAuthenticated) {
     }
 }
 
-// Теперь для каждого поля, если есть ошибка, загружаем текст сообщения из валидатора
+// Тексты ошибок для отображения под полями
 $errorMessages = [];
 foreach ($fields as $field) {
     if (isset($errors[$field])) {
@@ -235,16 +203,15 @@ foreach ($fields as $field) {
 function getFieldError($field) {
     $map = [
         'full_name' => 'ФИО должно содержать только буквы, пробелы и дефис',
-        'phone' => 'Телефон должен содержать 11 цифр, начиная с 7 или 8.',
-        'email' => 'Введите корректный email.',
-        'birth_date' => 'Дата рождения должна быть в формате ГГГГ-ММ-ДД и не быть позже текущей.',
-        'gender' => 'Выберите пол.',
-        'languages' => 'Выберите хотя бы один язык.',
-        'bio' => 'Биография не должна быть пустой и превышать 5000 символов.',
-        'contract_agreed' => 'Необходимо подтвердить ознакомление с контрактом.'
+        'phone' => 'Телефон должен содержать 11 цифр, начиная с 7 или 8',
+        'email' => 'Введите корректный email',
+        'birth_date' => 'Дата рождения должна быть в формате ГГГГ-ММ-ДД и не быть позже текущей',
+        'gender' => 'Выберите пол',
+        'languages' => 'Выберите хотя бы один язык',
+        'bio' => 'Биография не должна быть пустой и превышать 5000 символов',
+        'contract_agreed' => 'Необходимо подтвердить ознакомление с контрактом'
     ];
-    return $map[$field] ?? 'Некорректное значение.';
+    return $map[$field] ?? 'Некорректное значение';
 }
 
-// Подключаем форму
 include 'form.php';
