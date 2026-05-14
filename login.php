@@ -32,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($user && password_verify($password, $user['password_hash'])) {
             $_SESSION['login'] = $user['login'];
             $_SESSION['uid'] = $user['id'];
-            $_SESSION['pass'] = $password; // сохраняем пароль для отображения после входа
             header('Location: ./');
             exit();
         } else {
