@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $appId = authenticate($login, $password, $pdo);
             if ($appId) {
                 $_SESSION['application_id'] = $appId;
+                $_SESSION['login'] = $login;   // сохраняем логин в сессию
                 unset($_SESSION['auth_error']);
             } else {
                 $_SESSION['auth_error'] = 'Неверный логин или пароль.';
@@ -121,6 +122,15 @@ $messages = [];
 $errors = [];
 $values = [];
 
+// Инициализация languages как массива для всех случаев
+foreach ($fields as $f) {
+    if ($f === 'languages') {
+        $values[$f] = [];
+    } else {
+        $values[$f] = '';
+    }
+}
+
 // Сообщение об успешном сохранении
 if (!empty($_COOKIE['save'])) {
     setcookie('save', '', 100000);
@@ -147,6 +157,8 @@ if (!empty($_SESSION['auth_error'])) {
 
 // Загружаем данные: если авторизован — из БД, иначе — из кук
 $isAuthenticated = isset($_SESSION['application_id']);
+$authLogin = $_SESSION['login'] ?? '';
+
 if ($isAuthenticated) {
     $appId = (int)$_SESSION['application_id'];
     $appData = getApplicationById($appId, $pdo);
@@ -157,7 +169,7 @@ if ($isAuthenticated) {
             'email' => $appData['email'],
             'birth_date' => $appData['birth_date'],
             'gender' => $appData['gender'],
-            'languages' => $appData['languages'],
+            'languages' => $appData['languages'] ?? [],
             'bio' => $appData['bio'],
             'contract_agreed' => $appData['contract_agreed']
         ];
@@ -180,9 +192,8 @@ if (!$isAuthenticated) {
             if ($field === 'languages') $val = unserialize($val);
             $flashValues[$field] = $val;
         }
-        // Удаляем временные куки, чтобы они не висели (но их прочитаем один раз)
+        // Удаляем временные куки, чтобы они не висели
         setcookie($valueKey, '', 100000);
-        // Ошибки тоже удаляем (они уже использованы)
         setcookie($field . '_error', '', 100000);
     }
     if (!empty($flashValues)) {
@@ -195,14 +206,13 @@ if (!$isAuthenticated) {
                 if ($field === 'languages') $val = unserialize($val);
                 $values[$field] = $val;
             } else {
-                $values[$field] = '';
+                $values[$field] = ($field === 'languages') ? [] : '';
             }
         }
-        if ($values['languages'] === '') $values['languages'] = [];
-        $values['contract_agreed'] = !empty($values['contract_agreed']);
     }
     // Убедимся, что languages — массив
     if (!is_array($values['languages'])) $values['languages'] = [];
+    $values['contract_agreed'] = !empty($values['contract_agreed']);
 }
 
 // Собираем ошибки из кук ошибок (для гостя)
@@ -210,13 +220,18 @@ if (!$isAuthenticated) {
     foreach ($fields as $field) {
         if (!empty($_COOKIE[$field . '_error'])) {
             $errors[$field] = true;
-            // Добавляем сообщение об ошибке
-            $messages[] = '<div class="error-message">' . getFieldError($field) . '</div>';
         }
     }
 }
 
-// Вспомогательная функция для сообщений об ошибках
+// Теперь для каждого поля, если есть ошибка, загружаем текст сообщения из валидатора
+$errorMessages = [];
+foreach ($fields as $field) {
+    if (isset($errors[$field])) {
+        $errorMessages[$field] = getFieldError($field);
+    }
+}
+
 function getFieldError($field) {
     $map = [
         'full_name' => 'ФИО должно содержать только буквы, пробелы и дефис',

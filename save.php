@@ -154,7 +154,7 @@ function getApplicationById(int $appId, PDO $pdo): ?array {
     $langStmt->execute([$appId]);
     $languages = $langStmt->fetchAll(PDO::FETCH_COLUMN);
 
-    $app['languages'] = $languages;
+    $app['languages'] = $languages ?? [];
     return $app;
 }
 
