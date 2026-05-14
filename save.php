@@ -1,6 +1,4 @@
 <?php
-// save.php – функции для работы с БД (передаётся готовое PDO-подключение)
-
 function saveApplication($data, $userId, $pdo) {
     $stmt = $pdo->prepare("
         INSERT INTO applications 
@@ -33,7 +31,6 @@ function saveApplication($data, $userId, $pdo) {
 }
 
 function updateApplication($data, $userId, $pdo) {
-    // Обновляем основную таблицу
     $stmt = $pdo->prepare("
         UPDATE applications SET
             full_name = :full_name,
@@ -55,14 +52,12 @@ function updateApplication($data, $userId, $pdo) {
         ':user_id'       => $userId
     ]);
 
-    // Удаляем старые языки
     $stmtDel = $pdo->prepare("
         DELETE FROM application_languages 
         WHERE application_id = (SELECT id FROM applications WHERE user_id = ?)
     ");
     $stmtDel->execute([$userId]);
 
-    // Вставляем новые языки
     if (!empty($data['languages'])) {
         $stmtAppId = $pdo->prepare("SELECT id FROM applications WHERE user_id = ?");
         $stmtAppId->execute([$userId]);
