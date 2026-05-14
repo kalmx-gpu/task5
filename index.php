@@ -56,13 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         foreach ($fields as $field) {
             setcookie($field . '_error', '', 100000);
-            setcookie($field . '_value', '', 100000);
             if (isset($errors[$field])) {
                 setcookie($field . '_error', '1', time() + 86400);
-                $val = $data[$field] ?? '';
-                if (is_array($val)) $val = serialize($val);
-                setcookie($field . '_value', $val, time() + 86400);
             }
+            $val = $data[$field] ?? '';
+            if (is_array($val)) $val = serialize($val);
+            setcookie($field . '_value', $val, time() + 86400);
         }
 
         if ($hasErrors) {

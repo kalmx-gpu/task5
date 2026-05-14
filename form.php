@@ -20,7 +20,6 @@
 
         <?php if (!$isAuthenticated): ?>
             <div class="auth-panel">
-                <h3>Вход</h3>
                 <form action="" method="post">
                     <input type="hidden" name="action" value="login">
                     <div class="form-group">
